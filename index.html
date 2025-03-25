@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fax TV - Oriby</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  font-family: sans-serif;
+  background-color: #f0f0f0;
+  margin: 0;
+}
+
+.player-container {
+  width: 100%;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+video {
+  width: 100%;
+  display: block;
+}
+
+.search-box {
+  padding: 5px; /* Reduced padding */
+  background-color: #eee;
+  margin: 0; /* Removed margin */
+}
+
+.search-box input {
+  width: 95%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin: 0 auto; /* Center the input */
+  display: block;
+}
+
+.playlist-container {
+  height: 450px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.playlist-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.playlist-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+
+.playlist-item:last-child {
+  border-bottom: none;
+}
+
+.playlist-item:hover {
+  background-color: #e9e9e9;
+}
+
+.playlist-item.active {
+  background-color: #d9d9d9;
+}
+
+.bullet-point {
+  font-size: 1.5em;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+footer {
+  text-align: center;
+  padding: 10px;
+  background-color: #ddd;
+  font-size: 0.8em;
+}
+</style>
+</head>
+<body>
+
+<div class="player-container">
+  <video id="myVideo" controls autoplay></video>
+
+  <div class="search-box">
+    <input type="text" id="search-input" placeholder="Search channel...">
+  </div>
+
+  <div class="playlist-container">
+    <ul id="playlist">
+      <!-- Playlist items will be added here -->
+    </ul>
+  </div>
+</div>
+
+<footer>
+  Developed by Oriby Team
+</footer>
+
+<script>
+  const video = document.getElementById('myVideo');
+  const playlist = document.getElementById('playlist');
+  const searchInput = document.getElementById('search-input');
+  let currentTrackIndex = 0;
+  let tracks = [];
+
+  // Function to load M3U file
+  function loadM3U(url) {
+    fetch(url)
+      .then(response => response.text())
+      .then(data => {
+        tracks = parseM3U(data);
+        populatePlaylist();
+        loadTrack(currentTrackIndex);
+      })
+      .catch(error => console.error('Error loading M3U:', error));
+  }
+
+  // Function to parse M3U file
+  function parseM3U(data) {
+    const lines = data.split('\n');
+    const tracks = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('#EXTINF:')) {
+        const title = line.substring(line.indexOf(',') + 1);
+        const url = lines[i + 1].trim();
+        tracks.push({ title: title, url: url });
+        i++;
+      }
+    }
+    return tracks;
+  }
+
+  // Function to create playlist
+  function populatePlaylist() {
+    playlist.innerHTML = '';
+    tracks.forEach((track, index) => {
+      const listItem = document.createElement('li');
+      listItem.classList.add('playlist-item');
+      listItem.innerHTML = '<span class="bullet-point">•</span>' + track.title;
+      listItem.addEventListener('click', () => {
+        loadTrack(index);
+      });
+      playlist.appendChild(listItem);
+    });
+  }
+
+  // Function to load track
+  function loadTrack(index) {
+    if (index < 0 || index >= tracks.length) return;
+
+    currentTrackIndex = index;
+    video.src = tracks[index].url;
+    video.load();
+    video.play();
+
+    // Highlight playlist item
+    const playlistItems = document.querySelectorAll('.playlist-item');
+    playlistItems.forEach((item, i) => {
+      item.classList.toggle('active', i === index);
+    });
+  }
+
+  // Play next track when video ends
+  video.addEventListener('ended', () => {
+    loadNextTrack();
+  });
+
+  // Function to load next track
+  function loadNextTrack() {
+    currentTrackIndex++;
+    if (currentTrackIndex >= tracks.length) {
+      currentTrackIndex = 0;
+    }
+    loadTrack(currentTrackIndex);
+  }
+
+  // Error handling
+  video.addEventListener('error', (error) => {
+    console.error('Video error:', error);
+    // Try to load the next track
+    loadNextTrack();
+  });
+
+  // Search functionality
+  searchInput.addEventListener('input', function() {
+    const searchTerm = searchInput.value.toLowerCase();
+    const playlistItems = document.querySelectorAll('.playlist-item');
+
+    playlistItems.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        item.style.display = "block";
+      } else {
+        item.style.display = "none";
+      }
+    });
+  });
+
+  // Example M3U URL
+  const m3uUrl = 'https://iptv-org.github.io/iptv/countries/bd.m3u';
+  loadM3U(m3uUrl);
+</script>
+
+</body>
+</html>
